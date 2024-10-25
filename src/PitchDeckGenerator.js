@@ -104,22 +104,107 @@ class PitchDeckGenerator {
         }),
       });
 
-      if (!response.ok)
+      if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
-      const result = await response.json();
-
-      try {
-        const jsonMatch = result.response.match(/\{[\s\S]*\}/);
-        return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-      } catch (error) {
-        console.error("Error parsing AI analysis:", error);
-        return null;
       }
+       const aiResponse = await response.json();
+      console.log("Raw AI response:", aiResponse);
+
+      // Helper function to extract and clean JSON string
+      const extractJsonString = (text) => {
+        const jsonStart = text.indexOf('{');
+        const jsonEnd = text.lastIndexOf('}') + 1;
+        if (jsonStart === -1 || jsonEnd === -1) return null;
+        return text.slice(jsonStart, jsonEnd);
+      };
+
+      // Helper function to ensure valid JSON format
+      const sanitizeJson = (jsonString) => {
+        return jsonString
+          .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":') // Ensure property names are quoted
+          .replace(/:\s*'([^']*?)'/g, ':"$1"')  // Replace single quotes with double quotes for values
+          .replace(/:\s*"([^"]*?)"/g, ':"$1"')  // Normalize spacing around quoted values
+          .replace(/:\s*([0-9.]+)\s*(,|})/g, ':"$1"$2') // Quote numeric values
+          .replace(/:\s*([^",{\[\s][^,}\]]*[^",}\]\s])\s*(,|})/g, ':"$1"$2') // Quote unquoted string values
+          .replace(/([0-9]+(?:\.[0-9]+)?)%/g, '"$1%"') // Handle percentage values
+          .replace(/,\s*([\]}])/g, '$1') // Remove trailing commas
+          .replace(/\n/g, ' ') // Remove newlines
+          .replace(/\s+/g, ' ') // Normalize spaces
+          .trim();
+      };
+
+      let parsedData;
+      const responseText = aiResponse.response;
+      
+      try {
+        // Extract JSON string from the response
+        const jsonString = extractJsonString(responseText);
+        if (!jsonString) throw new Error("No JSON object found in response");
+
+        // Clean and parse the JSON
+        const sanitizedJson = sanitizeJson(jsonString);
+        console.log("Sanitized JSON:", sanitizedJson);
+        
+        parsedData = JSON.parse(sanitizedJson);
+      } catch (parseError) {
+        console.error("Parse error:", parseError);
+        
+        // Fallback: Try to manually construct the object
+        const fallbackData = {
+          summary: {
+            title: "Executive Summary",
+            highlights: [
+              "Data analysis unavailable",
+              "Please check the input data"
+            ]
+          },
+          kpiAnalysis: {
+            metrics: [
+              {
+                name: "Status",
+                value: "Error in analysis",
+                trend: "stable",
+                insight: "Unable to process data"
+              }
+            ]
+          },
+          trendAnalysis: {
+            revenueAnalysis: {
+              labels: ["Q1", "Q2", "Q3", "Q4"],
+              values: [0, 0, 0, 0],
+              growth: "0%",
+              insights: ["Data unavailable"]
+            },
+            regionalPerformance: {
+              regions: ["Region 1", "Region 2"],
+              values: [0, 0],
+              topRegion: "Unknown",
+              insights: ["Data unavailable"]
+            },
+            profitability: {
+              margins: [0, 0, 0],
+              avgMargin: "0%",
+              insights: ["Data unavailable"]
+            }
+          },
+          recommendations: [
+            {
+              title: "System Error",
+              description: "Unable to generate recommendations due to data processing error",
+              impact: "Please try again"
+            }
+          ]
+        };
+        
+        parsedData = fallbackData;
+      }
+
+      return parsedData;
     } catch (error) {
-      console.error("Error getting AI analysis:", error);
-      return null;
+      console.error("Error in getAIAnalysis:", error);
+      throw new Error(`AI analysis failed: ${error.message}`);
     }
-  }
+}
 
   async createExecutiveSummarySlide(analysis) {
     const slide = this.pptx.addSlide();
@@ -240,11 +325,10 @@ class PitchDeckGenerator {
         italic: true,
       });
     });
-  }
-
-  async createTrendAnalysisSlide(analysis) {
+  }async createTrendAnalysisSlide(analysis) {
     const slide = this.pptx.addSlide();
 
+    // Add title
     slide.addText("Performance Trends", {
       x: 0.5,
       y: 0.3,
@@ -255,58 +339,113 @@ class PitchDeckGenerator {
       color: this.pptx.theme.colors.accent1,
     });
 
-    // Revenue trend chart
+    // Instead of charts, create visually appealing data tables
     const revenueData = analysis.trendAnalysis.revenueAnalysis;
-    slide.addChart(this.pptx.ChartType.line, {
-      title: "Revenue Trend",
+    
+    // Revenue Trend Table
+    slide.addText("Revenue Trend", {
       x: 0.5,
       y: 1.2,
       w: 6,
-      h: 3,
-      lineSize: 2,
-      chartColors: [this.pptx.theme.colors.accent1],
-      lineSmooth: true,
-      showLegend: true,
-      labels: revenueData.labels,
-      series: [
-        {
-          name: "Revenue",
-          values: revenueData.values,
-        },
-      ],
+      fontSize: 18,
+      bold: true,
+      color: this.pptx.theme.colors.accent2,
     });
 
-    // Regional performance chart
+    // Create revenue data table
+    const revenueRows = revenueData.labels.map((label, idx) => [
+      label,
+      `$${(revenueData.values[idx] / 1000).toFixed(1)}K`
+    ]);
+
+    slide.addTable([
+      [{ text: "Period", options: { bold: true } }, { text: "Revenue", options: { bold: true } }],
+      ...revenueRows
+    ], {
+      x: 0.5,
+      y: 1.8,
+      w: 6,
+      fill: { color: "F5F5F5" },
+      border: { type: "solid", color: "E0E0E0", pt: 1 },
+      colW: [3, 3],
+    });
+
+    // Regional Performance Table
     const regionalData = analysis.trendAnalysis.regionalPerformance;
-    slide.addChart(this.pptx.ChartType.bar, {
-      title: "Regional Performance",
+    
+    slide.addText("Regional Performance", {
       x: 7,
       y: 1.2,
       w: 6,
-      h: 3,
-      barDir: "col",
-      chartColors: [this.pptx.theme.colors.accent2],
-      labels: regionalData.regions,
-      series: [
-        {
-          name: "Performance",
-          values: regionalData.values,
-        },
-      ],
+      fontSize: 18,
+      bold: true,
+      color: this.pptx.theme.colors.accent2,
+    });
+
+    const regionalRows = regionalData.regions.map((region, idx) => [
+      region,
+      `$${(regionalData.values[idx] / 1000).toFixed(1)}K`
+    ]);
+
+    slide.addTable([
+      [{ text: "Region", options: { bold: true } }, { text: "Performance", options: { bold: true } }],
+      ...regionalRows
+    ], {
+      x: 7,
+      y: 1.8,
+      w: 6,
+      fill: { color: "F5F5F5" },
+      border: { type: "solid", color: "E0E0E0", pt: 1 },
+      colW: [3, 3],
+    });
+
+    // Add growth indicator
+    slide.addText(`Growth: ${revenueData.growth}`, {
+      x: 0.5,
+      y: 3.5,
+      w: 6,
+      fontSize: 16,
+      bold: true,
+      color: "00B294", // Green color for growth
+    });
+
+    // Add top region indicator
+    slide.addText(`Top Region: ${regionalData.topRegion}`, {
+      x: 7,
+      y: 3.5,
+      w: 6,
+      fontSize: 16,
+      bold: true,
+      color: this.pptx.theme.colors.accent1,
     });
 
     // Add insights
-    const insights = [...revenueData.insights, ...regionalData.insights];
-    slide.addText(insights.join("\n• "), {
-      x: 0.5,
-      y: 4.5,
-      w: "95%",
-      fontSize: 14,
-      bullet: true,
-      color: this.pptx.theme.colors.text2,
-    });
-  }
+    const insights = [
+      ...revenueData.insights,
+      ...regionalData.insights
+    ].filter(Boolean);
 
+    if (insights.length > 0) {
+      slide.addText("Key Insights:", {
+        x: 0.5,
+        y: 4.5,
+        w: "95%",
+        fontSize: 16,
+        bold: true,
+        color: this.pptx.theme.colors.accent1,
+      });
+
+      insights.forEach((insight, index) => {
+        slide.addText(`• ${insight}`, {
+          x: 0.5,
+          y: 5.0 + (index * 0.4),
+          w: "95%",
+          fontSize: 14,
+          color: this.pptx.theme.colors.text2,
+        });
+      });
+    }
+}
   async createRecommendationsSlide(analysis) {
     const slide = this.pptx.addSlide();
 
