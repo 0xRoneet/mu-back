@@ -7,8 +7,11 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "pptxgenjs": "^3.12.0",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.21.1",
     "node-fetch": "^3.3.0",
-    "dotenv": "^16.0.3"
+    "pptxgenjs": "^3.12.0"
   }
 }
