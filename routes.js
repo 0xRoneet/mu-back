@@ -87,12 +87,12 @@ router.post("/questions", async (req, res) => {
     const businessData = req.body;
 
     // Validate input
-    if (!businessData || Object.keys(businessData).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: "Business data is required",
-      });
-    }
+    // if (!businessData || Object.keys(businessData).length === 0) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     error: "Business data is required",
+    //   });
+    // }
 
     // Initialize question generator
     const questionGenerator = new QuestionGenerator("llama3");
