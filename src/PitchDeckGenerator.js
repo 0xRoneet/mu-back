@@ -3,11 +3,11 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 
 class PitchDeckGenerator {
-  constructor(modelName = "llama2") {
+  constructor(modelName = "llama3") {
     this.pptx = new PptxGenJS();
     this.modelName = 'llama3';
     this.ollamaEndpoint = "http://localhost:11434/api/generate";
-    this.initializePresentation();
+    // this.initializePresentation();
   }
 
   initializePresentation() {
@@ -31,6 +31,10 @@ class PitchDeckGenerator {
         text2: "444444",
       },
     };
+  }
+
+  async getAIReadme(data) {
+    
   }
 
   async getAIAnalysis(data) {
