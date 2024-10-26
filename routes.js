@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs/promises";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 import PitchDeckGenerator from "./src/PitchDeckGenerator.js";
 import QuestionGenerator from "./src/QuestionGenerator.js";
 import { cleanupOldFiles } from "./src/utils/fileUtils.js";
@@ -27,23 +27,10 @@ router.post("/analyze", async (req, res) => {
     // console.log("Generating presentation...");
     // const filename = await generator.generatePitchDeck(data);
 
-    // Read the generated file
-    const filePath = path.join(process.cwd(), filename);
-    const fileBuffer = await fs.readFile(filePath);
-
-    // Move file to uploads directory
-    const newFilePath = path.join(uploadsDir, filename);
-    await fs.rename(filePath, newFilePath);
-
-    // Construct file URL
-    const fileUrl = `/uploads/${filename}`;
-
     // Send response
     res.json({
       success: true,
       analysis: analysis,
-      presentationUrl: fileUrl,
-      filename: filename,
     });
 
     // Clean up old files
