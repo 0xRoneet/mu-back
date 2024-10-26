@@ -23,9 +23,9 @@ router.post("/analyze", async (req, res) => {
     console.log("Getting AI analysis...");
     const analysis = await generator.getAIAnalysis(data);
 
-    // Generate presentation
-    console.log("Generating presentation...");
-    const filename = await generator.generatePitchDeck(data);
+    // // Generate presentation
+    // console.log("Generating presentation...");
+    // const filename = await generator.generatePitchDeck(data);
 
     // Read the generated file
     const filePath = path.join(process.cwd(), filename);
